@@ -210,6 +210,25 @@ function activateCellVim(app: JupyterFrontEnd, tracker: INotebookTracker): Promi
                 tracker.currentWidget === app.shell.currentWidget;
         }
 
+	commands.addCommand('smart-exit', {
+            label: 'Exit but smart',
+            execute: args => {
+                const current = getCurrent(args);
+                if (current) {
+                    const { content } = current;
+                    if (content.activeCell !== null) {
+                        let editor = content.activeCell.editor as CodeMirrorEditor;
+                        const vim = editor.editor.state.vim;
+                        if (vim.visualMode || vim.insertMode || vim.inputState.operator !== null || vim.inputState.motion !== null || vim.inputState.keyBuffer.length != 0) {
+                            (CodeMirror as any).Vim.handleKey(editor.editor, '<Esc>');
+                        } else {
+                            commands.execute('notebook:enter-command-mode')
+                        }
+                    }
+                }
+            },
+            isEnabled
+        });
         commands.addCommand('run-select-next-edit', {
             label: 'Run Cell and Edit Next Cell',
             execute: args => {
@@ -476,7 +495,7 @@ function activateCellVim(app: JupyterFrontEnd, tracker: INotebookTracker): Promi
         commands.addKeyBinding({
             selector: '.jp-Notebook.jp-mod-editMode',
             keys: ['Escape'],
-            command: 'leave-insert-mode'
+            command: 'smart-exit'
         });
         commands.addKeyBinding({
             selector: '.jp-Notebook.jp-mod-editMode',
@@ -497,11 +516,6 @@ function activateCellVim(app: JupyterFrontEnd, tracker: INotebookTracker): Promi
             selector: '.jp-Notebook.jp-mod-editMode',
             keys: ['Shift Enter'],
             command: 'run-select-next-edit'
-        });
-        commands.addKeyBinding({
-            selector: '.jp-Notebook.jp-mod-editMode',
-            keys: ['Shift Escape'],
-            command: 'notebook:enter-command-mode'
         });
         commands.addKeyBinding({
             selector: '.jp-Notebook:focus',
